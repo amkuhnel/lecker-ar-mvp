@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import dbConnect from '../../dbConnect';
-import User from '../../models/User';
+import dbConnect from '../dbConnect';
+import User from '../models/User';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
