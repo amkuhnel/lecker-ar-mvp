@@ -9,7 +9,48 @@ const ProfileScreen: React.FC = () => {
     // Related food images for the personal grid
     // const gridImages removed as unused
 
+    const [user, setUser] = React.useState<any>(MOCK_USER);
+    const [reviews, setReviews] = React.useState<any[]>(MOCK_REVIEWS);
+    const [isLoading, setIsLoading] = React.useState(true);
     const [bio, setBio] = React.useState(MOCK_USER.bio || '');
+
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch Users
+                const userRes = await fetch('/api/users');
+                const userData = await userRes.json();
+
+                let currentUser = MOCK_USER;
+                if (userData.success && userData.data.length > 0) {
+                    // For MVP demo, just take the first user found in DB
+                    currentUser = userData.data[0];
+                    // Normalize _id to id
+                    currentUser.id = currentUser._id || currentUser.id;
+                    setUser(currentUser);
+                    setBio(currentUser.bio || '');
+                }
+
+                // Fetch Reviews for this user
+                // Use the ID we just found (or the mock one)
+                const userIdToFetch = currentUser._id || currentUser.id;
+
+                const reviewRes = await fetch(`/api/reviews?userId=${userIdToFetch}`);
+                const reviewData = await reviewRes.json();
+
+                if (reviewData.success) {
+                    setReviews(reviewData.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
     const [isEditingBio, setIsEditingBio] = React.useState(false);
 
     const handleSaveBio = () => {
@@ -19,6 +60,11 @@ const ProfileScreen: React.FC = () => {
 
     return (
         <div className="flex-1 flex flex-col bg-black text-white pb-28">
+            {isLoading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="w-12 h-12 border-4 border-[#f48c25] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            )}
             <header className="flex justify-between items-center px-4 py-4 sticky top-0 bg-black/95 backdrop-blur-md z-30 pt-safe">
                 <span className="text-xl font-bold">Lecker<span className="text-[#f48c25]">_AR</span></span>
                 <button
@@ -37,11 +83,11 @@ const ProfileScreen: React.FC = () => {
 
                     <div className="flex items-center space-x-5 mb-5 relative z-10">
                         <div className="w-20 h-20 rounded-full border-4 border-white/30 overflow-hidden shadow-lg bg-gray-800">
-                            <img src={MOCK_USER.avatar} alt={MOCK_USER.name} className="w-full h-full object-cover" />
+                            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-extrabold">{MOCK_USER.handle}</h2>
-                            <p className="text-white/80 text-sm font-medium">{MOCK_USER.stats.reviews} reseñas</p>
+                            <h2 className="text-2xl font-extrabold">{user.handle}</h2>
+                            <p className="text-white/80 text-sm font-medium">{user.stats?.reviews || 0} reseñas</p>
                         </div>
                     </div>
 
@@ -87,17 +133,17 @@ const ProfileScreen: React.FC = () => {
 
                     <div className="flex space-x-3 relative z-10">
                         <div
-                            onClick={() => navigate(`/user/${MOCK_USER.id}/list/followers`)}
+                            onClick={() => navigate(`/user/${user.id}/list/followers`)}
                             className="bg-white/10 backdrop-blur-md rounded-2xl flex-1 py-3 flex flex-col items-center cursor-pointer hover:bg-white/20 transition-colors active:scale-95"
                         >
-                            <span className="font-bold text-lg">{MOCK_USER.stats.followers}</span>
+                            <span className="font-bold text-lg">{user.stats?.followers || 0}</span>
                             <span className="text-[10px] uppercase tracking-widest font-bold text-white/60">Seguidores</span>
                         </div>
                         <div
-                            onClick={() => navigate(`/user/${MOCK_USER.id}/list/following`)}
+                            onClick={() => navigate(`/user/${user.id}/list/following`)}
                             className="bg-white/10 backdrop-blur-md rounded-2xl flex-1 py-3 flex flex-col items-center cursor-pointer hover:bg-white/20 transition-colors active:scale-95"
                         >
-                            <span className="font-bold text-lg">{MOCK_USER.stats.following}</span>
+                            <span className="font-bold text-lg">{user.stats?.following || 0}</span>
                             <span className="text-[10px] uppercase tracking-widest font-bold text-white/60">Seguidos</span>
                         </div>
                     </div>
@@ -132,7 +178,7 @@ const ProfileScreen: React.FC = () => {
                         <button className="text-[#f48c25] text-xs font-bold">Ver todas</button>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        {MOCK_REVIEWS.filter(r => r.userId === MOCK_USER.id).map((review) => (
+                        {reviews.filter((r: any) => r.userId === (user.id || user._id) || r.userId?._id === (user.id || user._id)).map((review: any) => (
                             <div
                                 key={review.id}
                                 onClick={() => navigate(`/venue/${review.venueId}`)}

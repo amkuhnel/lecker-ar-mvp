@@ -1,5 +1,6 @@
 export interface User {
     id: string;
+    _id?: string; // MongoDB ID
     name: string;
     handle: string;
     avatar: string;
