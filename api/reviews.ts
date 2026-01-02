@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import dbConnect from './dbConnect';
-import Review from './models/Review';
+import dbConnect from './_shared/dbConnect';
+import Review from './_shared/models/Review';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { method } = req;
