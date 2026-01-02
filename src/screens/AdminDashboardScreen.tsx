@@ -17,7 +17,7 @@ const AdminDashboardScreen: React.FC = () => {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch('/api/admin/stats');
+            const res = await fetch('/api/admin_stats');
             const data = await res.json();
             if (data.success) {
                 setStats(data.data);
