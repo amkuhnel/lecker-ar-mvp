@@ -1,11 +1,42 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import dbConnect from './_shared/dbConnect';
-import User from './_shared/models/User';
+import mongoose from 'mongoose';
+
+// --- INLINED LOGIC -------------------------------------------
+const MONGODB_URI = process.env.MONGODB_URI;
+
+async function internalDbConnect() {
+    if (mongoose.connection.readyState >= 1) {
+        return;
+    }
+    if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
+    return mongoose.connect(MONGODB_URI, { bufferCommands: false });
+}
+
+// USER SCHEMA
+const userSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    handle: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    avatar: { type: String, default: 'https://images.unsplash.com/photo-1546241072-48010ad28c2c?q=80&w=400&auto=format&fit=crop' },
+    bio: { type: String, default: '' },
+    stats: {
+        reviews: { type: Number, default: 0 },
+        followers: { type: Number, default: 0 },
+        following: { type: Number, default: 0 },
+    },
+    joinedDate: { type: Date, default: Date.now },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    password: { type: String, required: false, select: false },
+});
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+// -------------------------------------------------------------
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { method } = req;
 
-    await dbConnect();
+    await internalDbConnect();
 
     switch (method) {
         case 'GET':
@@ -37,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             break;
 
         default:
-            res.status(400).json({ success: false });
+            res.status(405).json({ success: false, message: 'Method not allowed' });
             break;
     }
 }

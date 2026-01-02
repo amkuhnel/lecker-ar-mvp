@@ -1,11 +1,50 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import dbConnect from './_shared/dbConnect';
-import Review from './_shared/models/Review';
+import mongoose from 'mongoose';
+
+// --- INLINED LOGIC -------------------------------------------
+const MONGODB_URI = process.env.MONGODB_URI;
+
+async function internalDbConnect() {
+    if (mongoose.connection.readyState >= 1) {
+        return;
+    }
+    if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
+    return mongoose.connect(MONGODB_URI, { bufferCommands: false });
+}
+
+// REVIEW SCHEMA
+const reviewSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    venueId: { type: String, required: false },
+    venueName: { type: String, required: true },
+    dishName: { type: String, required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    imageUrl: { type: String, required: true },
+    description: { type: String, default: '' },
+    location: { type: String, default: '' }, // Should be geoJSON in prod
+    likes: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now },
+});
+
+// Need to ensure User model is compiled for populate to work
+const userSchema = new mongoose.Schema({
+    name: { type: String },
+    handle: { type: String },
+    email: { type: String },
+    avatar: { type: String },
+    role: { type: String },
+}, { strict: false }); // Loose schema just for reference
+
+// Define models if not exists
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+const Review = mongoose.models.Review || mongoose.model('Review', reviewSchema);
+// -------------------------------------------------------------
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { method } = req;
 
-    await dbConnect();
+    await internalDbConnect();
 
     switch (method) {
         case 'GET':
@@ -18,6 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 res.status(200).json({ success: true, data: reviews });
             } catch (error) {
+                console.error("Fetch Error", error);
                 res.status(400).json({ success: false, error: error });
             }
             break;
@@ -32,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             break;
 
         default:
-            res.status(400).json({ success: false });
+            res.status(405).json({ success: false, message: 'Method not allowed' });
             break;
     }
 }

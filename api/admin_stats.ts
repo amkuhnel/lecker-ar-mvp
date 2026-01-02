@@ -1,7 +1,25 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import dbConnect from './_shared/dbConnect';
-import User from './_shared/models/User';
-import Review from './_shared/models/Review';
+import mongoose from 'mongoose';
+
+// --- INLINED LOGIC -------------------------------------------
+const MONGODB_URI = process.env.MONGODB_URI;
+
+async function internalDbConnect() {
+    if (mongoose.connection.readyState >= 1) {
+        return;
+    }
+    if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
+    return mongoose.connect(MONGODB_URI, { bufferCommands: false });
+}
+
+// Schemas (simplified for stats)
+const userSchema = new mongoose.Schema({}, { strict: false });
+const reviewSchema = new mongoose.Schema({}, { strict: false });
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+const Review = mongoose.models.Review || mongoose.model('Review', reviewSchema);
+// -------------------------------------------------------------
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -9,23 +27,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        await dbConnect();
+        await internalDbConnect();
 
         // Get basic stats
         const userCount = await User.countDocuments();
         const reviewCount = await Review.countDocuments();
 
         // Find top user
-        // Note: This is a heavy aggregation, simplified for MVP
         const users = await User.find({});
-        // In real app, use aggregation pipeline
 
         return res.status(200).json({
             success: true,
             data: {
                 totalUsers: userCount,
                 totalReviews: reviewCount,
-                activeUsers: users.length // Placeholder
+                activeUsers: users.length
             }
         });
 
