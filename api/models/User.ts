@@ -32,6 +32,16 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',
+    },
+    password: {
+        type: String,
+        required: false, // Optional for now as social login might not have it
+        select: false,   // Don't result by default
+    },
 });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

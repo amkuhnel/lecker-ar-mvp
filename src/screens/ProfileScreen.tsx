@@ -119,6 +119,14 @@ const ProfileScreen: React.FC = () => {
                         <div>
                             <h2 className="text-2xl font-extrabold">{user.handle}</h2>
                             <p className="text-white/80 text-sm font-medium">{user.stats?.reviews || 0} reseñas</p>
+                            {user.role === 'admin' && (
+                                <button
+                                    onClick={() => navigate('/admin')}
+                                    className="mt-2 text-[10px] bg-red-600 text-white px-3 py-1 rounded-full uppercase font-bold tracking-widest shadow-lg"
+                                >
+                                    Panel Admin
+                                </button>
+                            )}
                         </div>
                     </div>
 

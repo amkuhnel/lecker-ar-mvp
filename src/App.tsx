@@ -18,6 +18,7 @@ import MessagingScreen from './screens/MessagingScreen';
 import PublicProfileScreen from './screens/PublicProfileScreen';
 import ChatDetailScreen from './screens/ChatDetailScreen';
 import UserListScreen from './screens/UserListScreen';
+import AdminDashboardScreen from './screens/AdminDashboardScreen'; // New Import
 import SettingsScreen from './screens/SettingsScreen';
 
 const App: React.FC = () => {
@@ -41,6 +42,7 @@ const App: React.FC = () => {
           <Route path="/messaging" element={<MessagingScreen />} />
           <Route path="/chat/:id" element={<ChatDetailScreen />} />
           <Route path="/user/:id/list/:type" element={<UserListScreen />} />
+          <Route path="/admin" element={<AdminDashboardScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
