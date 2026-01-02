@@ -6,6 +6,10 @@ const ReviewSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
+    venueId: {
+        type: String,
+        required: false, // Optional for now as legacy data might not have it
+    },
     venueName: {
         type: String,
         required: true,

@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/BottomNav';
-import { MOCK_REVIEWS } from '../constants';
+// import { MOCK_REVIEWS } from '../constants';
 
 const HomeScreen: React.FC = () => {
     const navigate = useNavigate();
+    // const [activeTab, setActiveTab] = useState('Para ti'); // Removed unused state
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchReviews = async () => {
+            try {
+                const res = await fetch('/api/reviews');
+                const data = await res.json();
+                if (data.success) {
+                    setReviews(data.data);
+                }
+            } catch (error) {
+                console.error("Error fetching feed:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchReviews();
+    }, []);
 
     return (
         <div className="flex-1 flex flex-col bg-black text-white overflow-hidden">
@@ -61,44 +81,57 @@ const HomeScreen: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Favoritos de tus amigos Carousel - Resumen de alta fidelidad */}
+                {/* Favoritos de tus amigos Carousel */}
                 <div className="mb-8">
                     <div className="px-4 flex justify-between items-center mb-4">
                         <h3 className="text-lg font-bold">Favoritos de tus amigos</h3>
                     </div>
-                    <div className="flex space-x-5 overflow-x-auto no-scrollbar px-4">
-                        {MOCK_REVIEWS.map((review) => (
-                            <div
-                                key={review.id}
-                                onClick={() => navigate(`/venue/v-cabrera`)}
-                                className="min-w-[280px] bg-surface-dark rounded-[2.5rem] border border-white/5 overflow-hidden transition-all hover:border-white/20 active:scale-[0.98] shadow-lg relative"
-                            >
-                                <div className="h-44 relative overflow-hidden">
-                                    <img src={review.imageUrl} className="w-full h-full object-cover" alt={review.dishName} />
-                                    <div className="absolute top-4 right-4 bg-[#f48c25] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1">
-                                        {review.score}
-                                        <span className="material-symbols-outlined filled text-white text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                    </div>
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-80"></div>
-                                    <div className="absolute bottom-4 left-5">
-                                        <h4 className="text-white text-lg font-bold">{review.dishName}</h4>
-                                        <p className="text-xs text-white/70 font-medium">{review.venueName} • {review.location}</p>
-                                    </div>
-                                </div>
-                                <div className="p-4 flex flex-col gap-3">
-                                    <p className="text-xs text-gray-400 line-clamp-2 italic font-light">"{review.comment}"</p>
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex gap-1.5">
-                                            {review.tags.slice(0, 2).map((t) => (
-                                                <span key={t} className="text-[9px] px-2 py-0.5 bg-black/40 rounded-md text-[#baab9c] font-bold uppercase tracking-widest">{t}</span>
-                                            ))}
+
+                    {isLoading ? (
+                        <div className="flex justify-center py-12">
+                            <div className="w-8 h-8 border-4 border-[#f48c25] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    ) : reviews.length > 0 ? (
+                        <div className="flex space-x-5 overflow-x-auto no-scrollbar px-4 pb-4">
+                            {reviews.map((review: any) => (
+                                <div
+                                    key={review.id || review._id}
+                                    onClick={() => navigate(`/venue/${review.venueId || 'unknown'}`)}
+                                    className="min-w-[280px] bg-surface-dark rounded-[2.5rem] border border-white/5 overflow-hidden transition-all hover:border-white/20 active:scale-[0.98] shadow-lg relative shrink-0"
+                                >
+                                    <div className="h-44 relative overflow-hidden">
+                                        <img src={review.imageUrl} className="w-full h-full object-cover" alt={review.dishName} />
+                                        <div className="absolute top-4 right-4 bg-[#f48c25] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1">
+                                            {review.score || review.rating}
+                                            <span className="material-symbols-outlined filled text-white text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                                         </div>
-                                        {review.price && <span className="text-[#f48c25] font-bold text-sm">${review.price}</span>}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-80"></div>
+                                        <div className="absolute bottom-4 left-5">
+                                            <h4 className="text-white text-lg font-bold">{review.dishName}</h4>
+                                            <p className="text-xs text-white/70 font-medium">{review.venueName} • {review.location?.address || review.location}</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 flex flex-col gap-3">
+                                        <p className="text-xs text-gray-400 line-clamp-2 italic font-light">"{review.description || review.comment}"</p>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex gap-1.5">
+                                                {/* Tags mock or from DB if added */}
+                                                {['Italiana', 'Cena'].map((t) => (
+                                                    <span key={t} className="text-[9px] px-2 py-0.5 bg-black/40 rounded-md text-[#baab9c] font-bold uppercase tracking-widest">{t}</span>
+                                                ))}
+                                            </div>
+                                            {/* Price mock */}
+                                            <span className="text-[#f48c25] font-bold text-sm">$$$</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="px-4 py-8 text-center text-gray-500 bg-white/5 rounded-2xl mx-4">
+                            <p>No hay reseñas todavía.</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Nuevos cerca tuyo Carousel */}
@@ -116,7 +149,7 @@ const HomeScreen: React.FC = () => {
                             <div
                                 key={i}
                                 onClick={() => navigate('/venue/v1')}
-                                className="min-w-[160px] bg-surface-dark rounded-[2rem] border border-white/5 overflow-hidden active:scale-95 transition-transform cursor-pointer"
+                                className="min-w-[160px] bg-surface-dark rounded-[2rem] border border-white/5 overflow-hidden active:scale-95 transition-transform cursor-pointer shrink-0"
                             >
                                 <div className="h-28 relative">
                                     <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
@@ -133,7 +166,7 @@ const HomeScreen: React.FC = () => {
             </main>
 
             <BottomNav />
-        </div>
+        </div >
     );
 };
 

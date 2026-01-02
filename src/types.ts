@@ -14,6 +14,7 @@ export interface User {
 
 export interface Review {
     id: string;
+    _id?: string; // MongoDB ID
     userId: string;
     userName: string;
     userAvatar: string;

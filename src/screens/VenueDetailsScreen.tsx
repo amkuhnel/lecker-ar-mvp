@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MOCK_VENUES, MOCK_REVIEWS } from '../constants';
+// import { MOCK_VENUES, MOCK_REVIEWS } from '../constants';
 import { BottomNav } from '../components/BottomNav';
 import type { Review } from '../types';
 
@@ -8,7 +8,64 @@ const VenueDetailsScreen: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const venue = MOCK_VENUES.find(v => v.id === id) || MOCK_VENUES[0];
+    const [reviews, setReviews] = React.useState<Review[]>([]);
+    const [venue, setVenue] = React.useState<any>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchVenueData = async () => {
+            try {
+                // Fetch reviews for this venue to display and to infer venue details
+                // We need to implement a filter by venueId in the API or just client side filter for now if API doesn't support it
+                // Actually our API supports userId, but let's assume we can fetch all and filter or add support.
+                // For MVP reliability let's just fetch all reviews and filter client side
+                const res = await fetch('/api/reviews');
+                const data = await res.json();
+
+                if (data.success) {
+                    // Filter for this venueId
+                    const venueReviews = data.data.filter((r: any) => r.venueId === id || r.venueName === id); // Handle flexible matching
+                    setReviews(venueReviews);
+
+                    if (venueReviews.length > 0) {
+                        // Infer venue details from first review
+                        const first = venueReviews[0];
+                        setVenue({
+                            id: id,
+                            name: first.venueName,
+                            location: first.location?.address || 'Ubicación desconocida',
+                            category: first.category || 'Restaurante',
+                            priceRange: first.price || '$$'
+                        });
+                    } else {
+                        // If no reviews, we can't show much unless we have a venues API
+                        // Fallback/Empty state handled below
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchVenueData();
+    }, [id]);
+
+    if (isLoading) {
+        return <div className="flex-1 flex items-center justify-center bg-[#221910] text-white">Cargando...</div>;
+    }
+
+    if (!venue) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center bg-[#221910] text-white p-6 text-center">
+                <span className="material-symbols-outlined text-4xl mb-4 text-zinc-500">store_off</span>
+                <p className="font-bold text-lg">Lugar no encontrado</p>
+                <p className="text-sm text-zinc-400 mt-2 mb-6">Nadie ha reseñado este lugar (o no existe).</p>
+                <button onClick={() => navigate(-1)} className="text-[#f48c25] font-bold">Volver atrás</button>
+                <div className="mt-8"><BottomNav /></div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col bg-[#221910] text-white font-display min-h-screen pb-32 relative overflow-x-hidden antialiased">
@@ -64,9 +121,11 @@ const VenueDetailsScreen: React.FC = () => {
 
                 {/* Reviews List as Full Summary Cards */}
                 <div className="flex flex-col gap-10 px-6 pb-20">
-                    {MOCK_REVIEWS.map((rev) => (
-                        <ReviewSummaryCard key={rev.id} review={rev} />
-                    ))}
+                    <div className="flex flex-col gap-10 px-6 pb-20">
+                        {reviews.map((rev) => (
+                            <ReviewSummaryCard key={rev.id || rev._id} review={rev} />
+                        ))}
+                    </div>
                 </div>
             </main>
 

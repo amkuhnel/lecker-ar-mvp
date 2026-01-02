@@ -1,23 +1,57 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MOCK_USERS, MOCK_REVIEWS, MOCK_USER } from '../constants';
+// import { MOCK_USERS, MOCK_REVIEWS, MOCK_USER } from '../constants';
 import { BottomNav } from '../components/BottomNav';
 
 const PublicProfileScreen: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [isFollowing, setIsFollowing] = useState(false);
+    const [user, setUser] = useState<any>(null);
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Find user (fallback to logged in user if not found/matching)
-    const user = MOCK_USERS.find(u => u.id === id) || MOCK_USERS[1];
-    const isMe = user.id === MOCK_USER.id;
+    // TODO: Ideally fetch the currently logged in user to check 'isMe'
+    // For now we assume not me or check session storage if we had it
+    const isMe = false;
 
-    // Filter reviews for this user
-    const userReviews = MOCK_REVIEWS.filter(r => r.userId === user.id);
+    React.useEffect(() => {
+        const fetchData = async () => {
+            if (!id) return;
+            try {
+                // Fetch User
+                const userRes = await fetch(`/api/users?id=${id}`);
+                const userData = await userRes.json();
+                if (userData.success) {
+                    setUser(userData.data);
+                }
+
+                // Fetch Reviews
+                const reviewRes = await fetch(`/api/reviews?userId=${id}`);
+                const reviewData = await reviewRes.json();
+                if (reviewData.success) {
+                    setReviews(reviewData.data);
+                }
+            } catch (e) {
+                console.error("Error fetching public profile", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [id]);
+
+    if (loading) {
+        return <div className="flex-1 bg-black text-white flex items-center justify-center">Cargando...</div>;
+    }
+
+    if (!user) {
+        return <div className="flex-1 bg-black text-white flex items-center justify-center">Usuario no encontrado</div>;
+    }
 
     // Fallback images if user has no reviews with images
-    // Fallback images if user has no reviews with images
-    // const gridImages removed as unused
+    // Removed logic for now or adapt if needed
+
 
     const handleFollow = () => {
         setIsFollowing(!isFollowing);
@@ -113,12 +147,12 @@ const PublicProfileScreen: React.FC = () => {
                             <span className="text-[10px] uppercase tracking-widest font-bold text-[#f48c25] mb-1">Galería</span>
                             <h3 className="text-lg font-black tracking-tight">Sus Reseñas</h3>
                         </div>
-                        <span className="text-zinc-500 text-xs font-bold">{userReviews.length} publicaciones</span>
+                        <span className="text-zinc-500 text-xs font-bold">{reviews.length} publicaciones</span>
                     </div>
 
-                    {userReviews.length > 0 ? (
+                    {reviews.length > 0 ? (
                         <div className="grid grid-cols-3 gap-1">
-                            {userReviews.map((review) => (
+                            {reviews.map((review: any) => (
                                 <div
                                     key={review.id}
                                     onClick={() => navigate(`/venue/${review.venueId}`)}

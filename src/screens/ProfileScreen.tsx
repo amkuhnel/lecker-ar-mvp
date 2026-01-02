@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/BottomNav';
-import { MOCK_USER, MOCK_REVIEWS } from '../constants';
+// import { MOCK_USER, MOCK_REVIEWS } from '../constants';
 
 const ProfileScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -9,10 +9,10 @@ const ProfileScreen: React.FC = () => {
     // Related food images for the personal grid
     // const gridImages removed as unused
 
-    const [user, setUser] = React.useState<any>(MOCK_USER);
-    const [reviews, setReviews] = React.useState<any[]>(MOCK_REVIEWS);
+    const [user, setUser] = React.useState<any>(null);
+    const [reviews, setReviews] = React.useState<any[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
-    const [bio, setBio] = React.useState(MOCK_USER.bio || '');
+    const [bio, setBio] = React.useState('');
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -21,25 +21,23 @@ const ProfileScreen: React.FC = () => {
                 const userRes = await fetch('/api/users');
                 const userData = await userRes.json();
 
-                let currentUser = MOCK_USER;
                 if (userData.success && userData.data.length > 0) {
                     // For MVP demo, just take the first user found in DB
-                    currentUser = userData.data[0];
+                    let currentUser = userData.data[0];
                     // Normalize _id to id
                     currentUser.id = currentUser._id || currentUser.id;
                     setUser(currentUser);
                     setBio(currentUser.bio || '');
-                }
 
-                // Fetch Reviews for this user
-                // Use the ID we just found (or the mock one)
-                const userIdToFetch = currentUser._id || currentUser.id;
+                    // Fetch Reviews for this user
+                    const reviewRes = await fetch(`/api/reviews?userId=${currentUser.id}`);
+                    const reviewData = await reviewRes.json();
 
-                const reviewRes = await fetch(`/api/reviews?userId=${userIdToFetch}`);
-                const reviewData = await reviewRes.json();
-
-                if (reviewData.success) {
-                    setReviews(reviewData.data);
+                    if (reviewData.success) {
+                        setReviews(reviewData.data);
+                    }
+                } else {
+                    setUser(null);
                 }
             } catch (error) {
                 console.error("Failed to fetch data:", error);
@@ -57,6 +55,39 @@ const ProfileScreen: React.FC = () => {
         setIsEditingBio(false);
         // Here you would typically save to backend
     };
+
+    if (!user && !isLoading) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center bg-black text-white p-6 text-center">
+                <span className="material-symbols-outlined text-6xl text-zinc-700 mb-4">person_off</span>
+                <h2 className="text-xl font-bold mb-2">No se encontró perfil</h2>
+                <p className="text-zinc-400 mb-6 max-w-xs">No hay datos en la base de datos todavía. ¡Crea tu primer usuario!</p>
+                <button
+                    onClick={() => {
+                        // Temporary quick creation for demo
+                        fetch('/api/users', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: "Nuevo Usuario",
+                                handle: "usuario_nuevo",
+                                email: `demo${Date.now()}@test.com`,
+                                bio: "¡Hola! Estoy usando Lecker AR."
+                            })
+                        }).then(() => window.location.reload());
+                    }}
+                    className="bg-[#f48c25] text-white font-bold py-3 px-6 rounded-xl hover:bg-orange-600 transition-colors"
+                >
+                    Crear Usuario Demo
+                </button>
+                <div className="mt-4">
+                    <BottomNav />
+                </div>
+            </div>
+        );
+    }
+
+    if (!user) return null; // Should be handled by loading or empty state above
 
     return (
         <div className="flex-1 flex flex-col bg-black text-white pb-28">
