@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MOCK_USERS } from '../constants';
 
 const UserListScreen: React.FC = () => {
-    const { type, id } = useParams<{ type: string, id: string }>();
+    const { type } = useParams<{ type: string, id: string }>();
     const navigate = useNavigate();
 
     // Mock data expansion for demo purposes
@@ -51,8 +51,8 @@ const UserListScreen: React.FC = () => {
                         <button
                             onClick={() => handleToggleFollow(user.id)}
                             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 border ${user.isFollowing
-                                    ? 'bg-transparent border-white/20 text-white hover:bg-white/5'
-                                    : 'bg-[#f48c25] border-[#f48c25] text-white hover:bg-orange-600'
+                                ? 'bg-transparent border-white/20 text-white hover:bg-white/5'
+                                : 'bg-[#f48c25] border-[#f48c25] text-white hover:bg-orange-600'
                                 }`}
                         >
                             {user.isFollowing ? 'Siguiendo' : 'Seguir'}

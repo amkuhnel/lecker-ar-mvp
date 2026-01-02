@@ -6,14 +6,8 @@ import { MOCK_USER, MOCK_REVIEWS } from '../constants';
 const ProfileScreen: React.FC = () => {
     const navigate = useNavigate();
     // Related food images for the personal grid
-    const gridImages = [
-        'https://images.unsplash.com/photo-1546241072-48010ad28c2c?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1473093226795-af9932fe5856?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1551183053-bf91a1d81141?q=80&w=400&h=400&auto=format&fit=crop'
-    ];
+    // Related food images for the personal grid
+    // const gridImages removed as unused
 
     const [bio, setBio] = React.useState(MOCK_USER.bio || '');
     const [isEditingBio, setIsEditingBio] = React.useState(false);
@@ -138,7 +132,7 @@ const ProfileScreen: React.FC = () => {
                         <button className="text-[#f48c25] text-xs font-bold">Ver todas</button>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        {MOCK_REVIEWS.filter(r => r.userId === MOCK_USER.id).map((review, i) => (
+                        {MOCK_REVIEWS.filter(r => r.userId === MOCK_USER.id).map((review) => (
                             <div
                                 key={review.id}
                                 onClick={() => navigate(`/venue/${review.venueId}`)}

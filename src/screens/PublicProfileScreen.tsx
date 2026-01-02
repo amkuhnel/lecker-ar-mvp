@@ -16,11 +16,8 @@ const PublicProfileScreen: React.FC = () => {
     const userReviews = MOCK_REVIEWS.filter(r => r.userId === user.id);
 
     // Fallback images if user has no reviews with images
-    const gridImages = userReviews.map(r => r.imageUrl).concat([
-        'https://images.unsplash.com/photo-1546241072-48010ad28c2c?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400&h=400&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400&h=400&auto=format&fit=crop'
-    ]).slice(0, 6);
+    // Fallback images if user has no reviews with images
+    // const gridImages removed as unused
 
     const handleFollow = () => {
         setIsFollowing(!isFollowing);
@@ -121,7 +118,7 @@ const PublicProfileScreen: React.FC = () => {
 
                     {userReviews.length > 0 ? (
                         <div className="grid grid-cols-3 gap-1">
-                            {userReviews.map((review, i) => (
+                            {userReviews.map((review) => (
                                 <div
                                     key={review.id}
                                     onClick={() => navigate(`/venue/${review.venueId}`)}

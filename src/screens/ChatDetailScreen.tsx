@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const ChatDetailScreen: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [messages, setMessages] = useState<Array<{ id: number, text: string, isMe: boolean, time: string }>>([
         { id: 1, text: 'Hola! ¿Cómo estás?', isMe: false, time: '10:00 AM' },
@@ -65,8 +65,8 @@ const ChatDetailScreen: React.FC = () => {
                     <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
                         <div
                             className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.isMe
-                                    ? 'bg-[#f48c25] text-white rounded-tr-none'
-                                    : 'bg-[#2f261f] text-zinc-200 border border-white/5 rounded-tl-none'
+                                ? 'bg-[#f48c25] text-white rounded-tr-none'
+                                : 'bg-[#2f261f] text-zinc-200 border border-white/5 rounded-tl-none'
                                 }`}
                         >
                             <p>{msg.text}</p>
