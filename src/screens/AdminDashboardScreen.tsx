@@ -46,6 +46,46 @@ const AdminDashboardScreen: React.FC = () => {
         if (activeTab === 'reviews') fetchReviews();
     }, [activeTab]);
 
+    const handleDeleteUser = async (id: string, name: string) => {
+        if (!window.confirm(`¿Estás seguro de eliminar a ${name}?`)) return;
+        try {
+            const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                setUsers(users.filter(u => u._id !== id));
+                fetchStats(); // Update counters
+            } else {
+                alert('Error al eliminar');
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleResetPassword = async (id: string, name: string) => {
+        const newPass = prompt(`Ingresa nueva contraseña para ${name}:`);
+        if (!newPass) return;
+
+        try {
+            const res = await fetch(`/api/users?id=${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: newPass })
+            });
+            if (res.ok) alert('Contraseña actualizada');
+        } catch (e) { console.error(e); }
+    };
+
+    const handleDeleteReview = async (id: string) => {
+        if (!window.confirm('¿Eliminar esta reseña?')) return;
+        try {
+            const res = await fetch(`/api/reviews?id=${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                setReviews(reviews.filter(r => r._id !== id));
+                fetchStats();
+            }
+        } catch (e) { console.error(e); }
+    };
+
     if (isLoading) {
         return <div className="flex-1 flex items-center justify-center bg-[#221910] text-white">Cargando Admin...</div>;
     }
@@ -100,8 +140,18 @@ const AdminDashboardScreen: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button className="text-[#f48c25] text-xs font-bold bg-[#f48c25]/10 px-3 py-1.5 rounded-lg border border-[#f48c25]/20">Reset</button>
-                                    <button className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">Borrar</button>
+                                    <button
+                                        onClick={() => handleResetPassword(u._id || u.id, u.name)}
+                                        className="text-[#f48c25] text-xs font-bold bg-[#f48c25]/10 px-3 py-1.5 rounded-lg border border-[#f48c25]/20 hover:bg-[#f48c25]/20"
+                                    >
+                                        Reset
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteUser(u._id || u.id, u.name)}
+                                        className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/20"
+                                    >
+                                        Borrar
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -121,8 +171,12 @@ const AdminDashboardScreen: React.FC = () => {
                                 </div>
                                 <p className="text-xs text-zinc-400 line-clamp-2">"{r.description || r.comment}"</p>
                                 <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
-                                    <button className="text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg bg-white/5">Editar</button>
-                                    <button className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">Borrar</button>
+                                    <button
+                                        onClick={() => handleDeleteReview(r._id || r.id)}
+                                        className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/20"
+                                    >
+                                        Borrar Reseña
+                                    </button>
                                 </div>
                             </div>
                         ))}

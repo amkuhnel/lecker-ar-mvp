@@ -30,7 +30,7 @@ const HomeScreen: React.FC = () => {
         <div className="flex-1 flex flex-col bg-black text-white overflow-hidden">
             {/* Header */}
             <header className="px-4 py-4 flex justify-between items-center sticky top-0 bg-black/95 backdrop-blur-md z-30 border-b border-white/5 pt-safe">
-                <h1 className="text-xl font-bold tracking-tight italic font-display">Lecker<span className="text-[#f48c25] not-italic">_AR</span></h1>
+                <h1 className="text-xl font-bold tracking-tight italic font-display">Schmeckea<span className="text-[#f48c25] not-italic">_AR</span></h1>
                 <button
                     onClick={() => navigate('/messaging')}
                     className="p-2 bg-surface-dark rounded-full text-white relative active:scale-90 transition-transform"

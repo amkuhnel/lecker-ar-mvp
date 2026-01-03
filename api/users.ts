@@ -41,16 +41,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (method) {
         case 'GET':
             try {
-                // If a specific ID is provided via query
                 if (req.query.id) {
                     const user = await User.findById(req.query.id);
-                    if (!user) {
-                        return res.status(404).json({ success: false, error: 'User not found' });
-                    }
+                    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
                     return res.status(200).json({ success: true, data: user });
                 }
-
-                // Otherwise return all users (for lists)
                 const users = await User.find({});
                 res.status(200).json({ success: true, data: users });
             } catch (error) {
@@ -62,6 +57,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 const user = await User.create(req.body);
                 res.status(201).json({ success: true, data: user });
+            } catch (error) {
+                res.status(400).json({ success: false, error: error });
+            }
+            break;
+
+        case 'PUT':
+            try {
+                // Used for Password Reset or Update Profile
+                const { id } = req.query;
+                if (!id) return res.status(400).json({ success: false, error: 'User ID required' });
+
+                const updateData = { ...req.body };
+                const user = await User.findByIdAndUpdate(id, updateData, { new: true });
+
+                if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+                res.status(200).json({ success: true, data: user });
+            } catch (error) {
+                res.status(400).json({ success: false, error: error });
+            }
+            break;
+
+        case 'DELETE':
+            try {
+                const { id } = req.query;
+                if (!id) return res.status(400).json({ success: false, error: 'User ID required' });
+
+                const deletedUser = await User.findByIdAndDelete(id);
+                if (!deletedUser) return res.status(404).json({ success: false, error: 'User not found' });
+
+                res.status(200).json({ success: true, data: {} });
             } catch (error) {
                 res.status(400).json({ success: false, error: error });
             }

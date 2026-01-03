@@ -22,7 +22,7 @@ const reviewSchema = new mongoose.Schema({
     rating: { type: Number, required: true, min: 1, max: 5 },
     imageUrl: { type: String, required: true },
     description: { type: String, default: '' },
-    location: { type: String, default: '' }, // Should be geoJSON in prod
+    location: { type: String, default: '' },
     likes: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
 });
@@ -34,9 +34,8 @@ const userSchema = new mongoose.Schema({
     email: { type: String },
     avatar: { type: String },
     role: { type: String },
-}, { strict: false }); // Loose schema just for reference
+}, { strict: false });
 
-// Define models if not exists
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Review = mongoose.models.Review || mongoose.model('Review', reviewSchema);
 // -------------------------------------------------------------
@@ -49,15 +48,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (method) {
         case 'GET':
             try {
-                // Filter by userId if provided
                 const filter = req.query.userId ? { userId: req.query.userId } : {};
-
-                // Populate user details for each review
                 const reviews = await Review.find(filter).populate('userId', 'name handle avatar').sort({ createdAt: -1 });
-
                 res.status(200).json({ success: true, data: reviews });
             } catch (error) {
-                console.error("Fetch Error", error);
                 res.status(400).json({ success: false, error: error });
             }
             break;
@@ -66,6 +60,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 const review = await Review.create(req.body);
                 res.status(201).json({ success: true, data: review });
+            } catch (error) {
+                res.status(400).json({ success: false, error: error });
+            }
+            break;
+
+        case 'DELETE':
+            try {
+                const { id } = req.query;
+                if (!id) return res.status(400).json({ success: false, error: 'Review ID required' });
+
+                const deletedReview = await Review.findByIdAndDelete(id);
+                if (!deletedReview) return res.status(404).json({ success: false, error: 'Review not found' });
+
+                res.status(200).json({ success: true, data: {} });
             } catch (error) {
                 res.status(400).json({ success: false, error: error });
             }
