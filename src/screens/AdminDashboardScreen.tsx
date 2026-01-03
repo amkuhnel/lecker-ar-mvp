@@ -10,10 +10,32 @@ const AdminDashboardScreen: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'reviews'>('overview');
     const [users, setUsers] = useState<any[]>([]);
     const [reviews, setReviews] = useState<any[]>([]);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
     useEffect(() => {
-        fetchStats();
+        checkAdminAccess();
     }, []);
+
+    const checkAdminAccess = async () => {
+        try {
+            // Check if user has admin role
+            const userRole = localStorage.getItem('user_role');
+
+            if (userRole !== 'admin') {
+                // Not admin, redirect to profile
+                navigate('/profile');
+                return;
+            }
+
+            setIsAdmin(true);
+            setIsCheckingAuth(false);
+            fetchStats();
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            navigate('/profile');
+        }
+    };
 
     const fetchStats = async () => {
         try {
@@ -86,8 +108,19 @@ const AdminDashboardScreen: React.FC = () => {
         } catch (e) { console.error(e); }
     };
 
-    if (isLoading) {
-        return <div className="flex-1 flex items-center justify-center bg-[#221910] text-white">Cargando Admin...</div>;
+    if (isCheckingAuth || isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-[#221910] text-white">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-[#f48c25] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm text-zinc-400">Verificando acceso...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isAdmin) {
+        return null; // Will redirect in useEffect
     }
 
     return (
