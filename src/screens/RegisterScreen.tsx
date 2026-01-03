@@ -30,7 +30,7 @@ const RegisterScreen: React.FC = () => {
                         onClick={() => navigate('/add-location')}
                         className="w-full py-4 rounded-2xl bg-[#f48c25] hover:bg-[#e07b1a] text-white font-bold shadow-lg shadow-orange-500/10 transition-all mt-2 active:scale-95"
                     >
-                        Unirse a Schmeckea
+                        Unirse a Lecker
                     </button>
                 </div>
             </main>

@@ -19,7 +19,7 @@ const WelcomeScreen: React.FC = () => {
                 </div>
 
                 <div className="text-center space-y-4">
-                    <h1 className="text-4xl font-extrabold tracking-tight">SCHMECKEA<span className="text-[#f48c25]">_AR</span></h1>
+                    <h1 className="text-4xl font-extrabold tracking-tight">LECKER<span className="text-[#f48c25]">_AR</span></h1>
                     <p className="text-gray-400 text-base max-w-[280px] mx-auto leading-relaxed font-light">
                         Descubre sabores, comparte experiencias y encuentra tu próximo plato favorito.
                     </p>
