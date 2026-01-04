@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BottomNav } from '../components/BottomNav';
 
 const AdminDashboardScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -383,8 +382,6 @@ const AdminDashboardScreen: React.FC = () => {
                     </div>
                 )}
             </main>
-
-            <BottomNav />
         </div>
     );
 };
