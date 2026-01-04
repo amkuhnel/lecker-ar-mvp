@@ -24,6 +24,13 @@ const reviewSchema = new mongoose.Schema({
     description: { type: String, default: '' },
     location: { type: String, default: '' },
     likes: { type: Number, default: 0 },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
     createdAt: { type: Date, default: Date.now },
 });
 
@@ -48,7 +55,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (method) {
         case 'GET':
             try {
-                const filter = req.query.userId ? { userId: req.query.userId } : {};
+                const filter: any = {};
+
+                // Filter by userId if provided
+                if (req.query.userId) {
+                    filter.userId = req.query.userId;
+                }
+
+                // Filter by status if provided (for admin), otherwise only show approved
+                if (req.query.status) {
+                    filter.status = req.query.status;
+                } else {
+                    filter.status = 'approved';
+                }
+
                 const reviews = await Review.find(filter).populate('userId', 'name handle avatar').sort({ createdAt: -1 });
                 res.status(200).json({ success: true, data: reviews });
             } catch (error) {
@@ -60,6 +80,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 const review = await Review.create(req.body);
                 res.status(201).json({ success: true, data: review });
+            } catch (error) {
+                res.status(400).json({ success: false, error: error });
+            }
+            break;
+
+        case 'PUT':
+            try {
+                const { id } = req.query;
+                const { status, approvedBy } = req.body;
+
+                if (!id) return res.status(400).json({ success: false, error: 'Review ID required' });
+                if (!status || !['approved', 'rejected'].includes(status)) {
+                    return res.status(400).json({ success: false, error: 'Valid status required (approved/rejected)' });
+                }
+
+                const updateData: any = {
+                    status,
+                    approvedAt: new Date()
+                };
+
+                if (approvedBy) {
+                    updateData.approvedBy = approvedBy;
+                }
+
+                const updatedReview = await Review.findByIdAndUpdate(
+                    id,
+                    updateData,
+                    { new: true }
+                );
+
+                if (!updatedReview) return res.status(404).json({ success: false, error: 'Review not found' });
+
+                res.status(200).json({ success: true, data: updatedReview });
             } catch (error) {
                 res.status(400).json({ success: false, error: error });
             }

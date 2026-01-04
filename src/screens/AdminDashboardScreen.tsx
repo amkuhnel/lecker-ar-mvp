@@ -5,107 +5,156 @@ import { BottomNav } from '../components/BottomNav';
 
 const AdminDashboardScreen: React.FC = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'reviews'>('overview');
-    const [users, setUsers] = useState<any[]>([]);
-    const [reviews, setReviews] = useState<any[]>([]);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+    const [activeTab, setActiveTab] = useState<'metrics' | 'activity' | 'validation'>('metrics');
+
+    // Metrics state
+    const [metrics, setMetrics] = useState<any>(null);
+    const [dateRange, setDateRange] = useState<{ start: string, end: string }>({
+        start: '',
+        end: new Date().toISOString().split('T')[0]
+    });
+
+    // Activity state
+    const [userActivity, setUserActivity] = useState<any[]>([]);
+
+    // Validation state
+    const [pendingReviews, setPendingReviews] = useState<any[]>([]);
+
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         checkAdminAccess();
     }, []);
 
+    useEffect(() => {
+        if (isAdmin) {
+            if (activeTab === 'metrics') fetchMetrics();
+            if (activeTab === 'activity') fetchActivity();
+            if (activeTab === 'validation') fetchPendingReviews();
+        }
+    }, [activeTab, isAdmin, dateRange]);
+
     const checkAdminAccess = async () => {
         try {
-            // Check if user has admin role
             const userRole = localStorage.getItem('user_role');
 
             if (userRole !== 'admin') {
-                // Not admin, redirect to profile
                 navigate('/profile');
                 return;
             }
 
             setIsAdmin(true);
             setIsCheckingAuth(false);
-            fetchStats();
         } catch (error) {
             console.error('Auth check failed:', error);
             navigate('/profile');
         }
     };
 
-    const fetchStats = async () => {
+    const fetchMetrics = async () => {
+        setIsLoading(true);
         try {
-            const res = await fetch('/api/admin_stats');
+            const params = new URLSearchParams();
+            if (dateRange.start) params.append('startDate', dateRange.start);
+            if (dateRange.end) params.append('endDate', dateRange.end);
+
+            const res = await fetch(`/api/admin_metrics?${params}`);
             const data = await res.json();
             if (data.success) {
-                setStats(data.data);
+                setMetrics(data.data);
             }
-        } catch (e) {
-            console.error("Failed to load admin stats", e);
+        } catch (error) {
+            console.error('Failed to fetch metrics:', error);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const fetchUsers = async () => {
-        const res = await fetch('/api/users');
-        const data = await res.json();
-        if (data.success) setUsers(data.data);
-    };
-
-    const fetchReviews = async () => {
-        const res = await fetch('/api/reviews');
-        const data = await res.json();
-        if (data.success) setReviews(data.data);
-    };
-
-    useEffect(() => {
-        if (activeTab === 'users') fetchUsers();
-        if (activeTab === 'reviews') fetchReviews();
-    }, [activeTab]);
-
-    const handleDeleteUser = async (id: string, name: string) => {
-        if (!window.confirm(`¿Estás seguro de eliminar a ${name}?`)) return;
+    const fetchActivity = async () => {
+        setIsLoading(true);
         try {
-            const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+            const res = await fetch('/api/admin_activity');
             const data = await res.json();
             if (data.success) {
-                setUsers(users.filter(u => u._id !== id));
-                fetchStats(); // Update counters
-            } else {
-                alert('Error al eliminar');
+                setUserActivity(data.data);
             }
-        } catch (e) { console.error(e); }
+        } catch (error) {
+            console.error('Failed to fetch activity:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleResetPassword = async (id: string, name: string) => {
-        const newPass = prompt(`Ingresa nueva contraseña para ${name}:`);
-        if (!newPass) return;
-
+    const fetchPendingReviews = async () => {
+        setIsLoading(true);
         try {
-            const res = await fetch(`/api/users?id=${id}`, {
+            const res = await fetch('/api/reviews?status=pending');
+            const data = await res.json();
+            if (data.success) {
+                setPendingReviews(data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch pending reviews:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleReviewAction = async (reviewId: string, action: 'approved' | 'rejected') => {
+        try {
+            const res = await fetch(`/api/reviews?id=${reviewId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: newPass })
+                body: JSON.stringify({
+                    status: action,
+                    approvedBy: localStorage.getItem('admin_id') // You might want to store this
+                })
             });
-            if (res.ok) alert('Contraseña actualizada');
-        } catch (e) { console.error(e); }
-    };
 
-    const handleDeleteReview = async (id: string) => {
-        if (!window.confirm('¿Eliminar esta reseña?')) return;
-        try {
-            const res = await fetch(`/api/reviews?id=${id}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.success) {
-                setReviews(reviews.filter(r => r._id !== id));
-                fetchStats();
+                // Remove from pending list
+                setPendingReviews(prev => prev.filter(r => r._id !== reviewId));
+                // Refresh metrics
+                fetchMetrics();
             }
-        } catch (e) { console.error(e); }
+        } catch (error) {
+            console.error('Failed to update review:', error);
+        }
+    };
+
+    const setPresetRange = (preset: string) => {
+        const end = new Date().toISOString().split('T')[0];
+        let start = '';
+
+        const today = new Date();
+        switch (preset) {
+            case 'today':
+                start = end;
+                break;
+            case 'week':
+                const weekAgo = new Date(today);
+                weekAgo.setDate(today.getDate() - 7);
+                start = weekAgo.toISOString().split('T')[0];
+                break;
+            case 'month':
+                const monthAgo = new Date(today);
+                monthAgo.setMonth(today.getMonth() - 1);
+                start = monthAgo.toISOString().split('T')[0];
+                break;
+            case 'year':
+                const yearAgo = new Date(today);
+                yearAgo.setFullYear(today.getFullYear() - 1);
+                start = yearAgo.toISOString().split('T')[0];
+                break;
+            case 'all':
+                start = '';
+                break;
+        }
+
+        setDateRange({ start, end });
     };
 
     if (isCheckingAuth || isLoading) {
@@ -113,14 +162,16 @@ const AdminDashboardScreen: React.FC = () => {
             <div className="flex-1 flex items-center justify-center bg-[#221910] text-white">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-[#f48c25] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-sm text-zinc-400">Verificando acceso...</p>
+                    <p className="text-sm text-zinc-400">
+                        {isCheckingAuth ? 'Verificando acceso...' : 'Cargando datos...'}
+                    </p>
                 </div>
             </div>
         );
     }
 
     if (!isAdmin) {
-        return null; // Will redirect in useEffect
+        return null;
     }
 
     return (
@@ -129,7 +180,7 @@ const AdminDashboardScreen: React.FC = () => {
                 <span className="text-xl font-bold text-[#f48c25]">Admin Dashboard</span>
                 <button
                     onClick={() => navigate('/profile')}
-                    className="text-white bg-white/10 px-3 py-1 rounded-full text-xs font-bold"
+                    className="text-white bg-white/10 px-3 py-1 rounded-full text-xs font-bold hover:bg-white/20 transition-colors"
                 >
                     Salir
                 </button>
@@ -138,81 +189,197 @@ const AdminDashboardScreen: React.FC = () => {
             <main className="flex-1 p-4 overflow-y-auto no-scrollbar pb-24">
                 {/* Tabs */}
                 <div className="flex space-x-2 mb-6 bg-white/5 p-1 rounded-xl">
-                    {['overview', 'users', 'reviews'].map(tab => (
+                    {[
+                        { id: 'metrics', label: 'Métricas' },
+                        { id: 'activity', label: 'Actividad' },
+                        { id: 'validation', label: 'Validación' }
+                    ].map(tab => (
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab as any)}
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold capitalize transition-all ${activeTab === tab ? 'bg-[#f48c25] text-white shadow-lg' : 'text-zinc-400 hover:text-white'
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold capitalize transition-all ${activeTab === tab.id
+                                ? 'bg-[#f48c25] text-white shadow-lg'
+                                : 'text-zinc-400 hover:text-white'
                                 }`}
                         >
-                            {tab === 'overview' ? 'Resumen' : tab === 'users' ? 'Usuarios' : 'Reseñas'}
+                            {tab.label}
                         </button>
                     ))}
                 </div>
 
-                {/* Content */}
-                {activeTab === 'overview' && stats && (
-                    <div className="grid grid-cols-2 gap-4">
-                        <StatCard label="Usuarios" value={stats.totalUsers} icon="group" />
-                        <StatCard label="Reseñas" value={stats.totalReviews} icon="rate_review" />
-                        <StatCard label="Activos" value={stats.activeUsers} icon="verified_user" />
+                {/* Metrics Tab */}
+                {activeTab === 'metrics' && (
+                    <div className="space-y-6">
+                        {/* Date Filter */}
+                        <div className="bg-surface-dark p-4 rounded-xl border border-white/5">
+                            <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">Filtro de Fecha</h3>
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {['today', 'week', 'month', 'year', 'all'].map(preset => (
+                                    <button
+                                        key={preset}
+                                        onClick={() => setPresetRange(preset)}
+                                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold transition-colors"
+                                    >
+                                        {preset === 'today' ? 'Hoy' :
+                                            preset === 'week' ? 'Última Semana' :
+                                                preset === 'month' ? 'Último Mes' :
+                                                    preset === 'year' ? 'Último Año' : 'Todo'}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs text-zinc-500 mb-1 block">Desde</label>
+                                    <input
+                                        type="date"
+                                        value={dateRange.start}
+                                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-zinc-500 mb-1 block">Hasta</label>
+                                    <input
+                                        type="date"
+                                        value={dateRange.end}
+                                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Metrics Cards */}
+                        {metrics && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <MetricCard
+                                    label="Reseñas"
+                                    value={metrics.totalReviews}
+                                    icon="rate_review"
+                                />
+                                <MetricCard
+                                    label="Usuarios Activos"
+                                    value={metrics.activeUsers}
+                                    icon="group"
+                                />
+                                <MetricCard
+                                    label="Restaurantes"
+                                    value={metrics.uniqueVenues}
+                                    icon="restaurant"
+                                />
+                                <MetricCard
+                                    label="Pendientes"
+                                    value={metrics.pendingReviews}
+                                    icon="pending"
+                                    highlight
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {activeTab === 'users' && (
+                {/* Activity Tab */}
+                {activeTab === 'activity' && (
                     <div className="space-y-4">
-                        {users.map((u: any) => (
-                            <div key={u._id} className="bg-surface-dark p-4 rounded-xl border border-white/5 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
-                                        <img src={u.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-sm">{u.name}</p>
-                                        <p className="text-xs text-zinc-500">@{u.handle} • {u.role || 'user'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleResetPassword(u._id || u.id, u.name)}
-                                        className="text-[#f48c25] text-xs font-bold bg-[#f48c25]/10 px-3 py-1.5 rounded-lg border border-[#f48c25]/20 hover:bg-[#f48c25]/20"
-                                    >
-                                        Reset
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteUser(u._id || u.id, u.name)}
-                                        className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/20"
-                                    >
-                                        Borrar
-                                    </button>
+                        <h3 className="text-lg font-bold mb-4">Actividad de Usuarios</h3>
+                        {userActivity.length > 0 ? (
+                            <div className="bg-surface-dark rounded-xl border border-white/5 overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-black/40">
+                                            <tr>
+                                                <th className="text-left p-3 font-bold text-zinc-400">Usuario</th>
+                                                <th className="text-center p-3 font-bold text-zinc-400">Reseñas</th>
+                                                <th className="text-center p-3 font-bold text-zinc-400">Seguidos</th>
+                                                <th className="text-center p-3 font-bold text-zinc-400">Seguidores</th>
+                                                <th className="text-center p-3 font-bold text-zinc-400">Días</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {userActivity.map((user) => (
+                                                <tr key={user._id} className="border-t border-white/5 hover:bg-white/5 transition-colors">
+                                                    <td className="p-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden">
+                                                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-xs">{user.name}</p>
+                                                                <p className="text-[10px] text-zinc-500">@{user.handle}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-center p-3 font-bold">{user.reviewCount}</td>
+                                                    <td className="text-center p-3">{user.following}</td>
+                                                    <td className="text-center p-3">{user.followers}</td>
+                                                    <td className="text-center p-3">
+                                                        {user.daysSinceLastReview !== null ? (
+                                                            <span className={user.daysSinceLastReview > 30 ? 'text-red-400' : 'text-zinc-400'}>
+                                                                {user.daysSinceLastReview}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-zinc-600">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                        ))}
+                        ) : (
+                            <p className="text-center text-zinc-500 py-8">No hay datos de actividad</p>
+                        )}
                     </div>
                 )}
 
-                {activeTab === 'reviews' && (
+                {/* Validation Tab */}
+                {activeTab === 'validation' && (
                     <div className="space-y-4">
-                        {reviews.map((r: any) => (
-                            <div key={r._id} className="bg-surface-dark p-4 rounded-xl border border-white/5 flex flex-col gap-3">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h4 className="font-bold text-sm">{r.dishName}</h4>
-                                        <p className="text-xs text-zinc-500">{r.venueName}</p>
+                        <h3 className="text-lg font-bold mb-4">Reseñas Pendientes de Validación</h3>
+                        {pendingReviews.length > 0 ? (
+                            pendingReviews.map(review => (
+                                <div key={review._id} className="bg-surface-dark p-4 rounded-xl border border-white/5">
+                                    <div className="flex gap-4">
+                                        <img
+                                            src={review.imageUrl}
+                                            alt={review.dishName}
+                                            className="w-24 h-24 rounded-xl object-cover"
+                                        />
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-sm mb-1">{review.dishName}</h4>
+                                            <p className="text-xs text-zinc-400 mb-2">{review.venueName}</p>
+                                            <p className="text-xs text-zinc-500 mb-2">
+                                                Por: @{review.userId?.handle || 'Usuario'}
+                                            </p>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-[#f48c25] font-bold text-sm">{review.rating}★</span>
+                                            </div>
+                                            <p className="text-xs text-zinc-400 line-clamp-2">"{review.description}"</p>
+                                        </div>
                                     </div>
-                                    <span className="text-[#f48c25] font-bold text-sm">{r.rating}★</span>
+                                    <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+                                        <button
+                                            onClick={() => handleReviewAction(review._id, 'approved')}
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm"
+                                        >
+                                            ✓ Aprobar
+                                        </button>
+                                        <button
+                                            onClick={() => handleReviewAction(review._id, 'rejected')}
+                                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm"
+                                        >
+                                            ✗ Rechazar
+                                        </button>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-zinc-400 line-clamp-2">"{r.description || r.comment}"</p>
-                                <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
-                                    <button
-                                        onClick={() => handleDeleteReview(r._id || r.id)}
-                                        className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/20"
-                                    >
-                                        Borrar Reseña
-                                    </button>
-                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-12 bg-surface-dark rounded-xl border border-white/5">
+                                <span className="material-symbols-outlined text-6xl text-zinc-700 mb-4">check_circle</span>
+                                <p className="text-zinc-400">No hay reseñas pendientes</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 )}
             </main>
@@ -222,9 +389,9 @@ const AdminDashboardScreen: React.FC = () => {
     );
 };
 
-const StatCard = ({ label, value, icon }: any) => (
-    <div className="bg-surface-dark p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-2">
-        <span className="material-symbols-outlined text-[#f48c25] text-3xl">{icon}</span>
+const MetricCard = ({ label, value, icon, highlight = false }: any) => (
+    <div className={`bg-surface-dark p-5 rounded-2xl border ${highlight ? 'border-[#f48c25]/30' : 'border-white/5'} flex flex-col items-center justify-center gap-2`}>
+        <span className={`material-symbols-outlined ${highlight ? 'text-[#f48c25]' : 'text-zinc-500'} text-3xl`}>{icon}</span>
         <span className="text-3xl font-black text-white">{value}</span>
         <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{label}</span>
     </div>
